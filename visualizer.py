@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# Written by Nikolay Budin, 2017
+
 import time
 import sys
 import colorama
