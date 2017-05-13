@@ -1,0 +1,17 @@
+start: a
+accept: ac
+reject: rj
+blank: _
+a _ -> b H >
+b _ -> c e >
+c _ -> d l >
+d _ -> e l >
+e _ -> f o >
+f _ -> g , >
+g _ -> h _ >
+h _ -> i w >
+i _ -> j o >
+j _ -> k r >
+k _ -> l l >
+l _ -> m d >
+m _ -> ac ! >
