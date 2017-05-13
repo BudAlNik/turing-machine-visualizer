@@ -74,18 +74,18 @@ prev_l = 0
 
 while (True):
     sys.stdout.write("\r")
-    cur_s = ""
+    cur_s = " "
     cur_symbol = ""
     for i in range(len(tape_negative) - 1, -1, -1):
         if (-i - 1 == pos):
-            cur_s += colorama.Fore.GREEN + tape_negative[i] + colorama.Style.RESET_ALL + " "
+            cur_s += colorama.Fore.GREEN + colorama.Style.BRIGHT + tape_negative[i] + colorama.Style.RESET_ALL + " "
             cur_symbol = tape_negative[i]
         else:
             cur_s += tape_negative[i] + " "
 
     for i in range(len(tape_positive)):
         if (i == pos):
-            cur_s += colorama.Fore.GREEN + tape_positive[i] + colorama.Style.RESET_ALL + " "
+            cur_s += colorama.Fore.GREEN + colorama.Style.BRIGHT + tape_positive[i] + colorama.Style.RESET_ALL + " "
             cur_symbol = tape_positive[i]
         else:
             cur_s += tape_positive[i] + " "
