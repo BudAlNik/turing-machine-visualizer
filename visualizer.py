@@ -34,18 +34,25 @@ def get_dir(act):
         return 0
     if (act == ">"):
         return 1
+    return 2
 
 prog = open(name, "r")
 
-accept = ""
-reject = ""
-cur = ""
+accept = "AC"
+reject = "RJ"
+cur = "S"
 blank = "_"
 
 graph = dict()
+nodes = set()
 
+c = 0
 for s in prog:
-    if (s.startswith("start:")):
+    if (c == 0 and s[:-1].isdecimal()):
+        if (int(s) != 1):
+            print("Sorry, i can't run multi-tape machine")
+            exit(0)
+    elif (s.startswith("start:")):
         cur = s[s.find(":") + 1:].strip()
     elif (s.startswith("accept:")):
         accept = s[s.find(":") + 1:].strip()
@@ -55,12 +62,27 @@ for s in prog:
         blank = s[s.find(":") + 1:].strip()
     elif (s.strip() != ""):
         tmp = s.split()
+        if (len(tmp) != 6):
+            print("Parse failed on line: \"" + s[:-1] + "\"")
+            exit(0)
         fr = tmp[0].strip()
         ch = tmp[1].strip()
+        if (tmp[2] != "->"):
+            print("Parse failed on line: \"" + s[:-1] + "\"")
+            exit(0)
         to = tmp[3].strip()
         new_ch = tmp[4].strip()
         act = tmp[5].strip()
+        if (act == 2):
+            print("Parse failed on line: \"" + s[:-1] + "\"")
+            exit(0)
         graph[(fr, ch)] = [to, new_ch, get_dir(act)]
+        nodes.add(fr)
+    c += 1
+
+for p in graph:
+    if (graph[p][0] != reject and graph[p][0] != accept and not graph[p][0] in nodes):
+        print("Warning: There's an edge leading to node \"" + graph[p][0] + "\", but this node doesn't exist")
 
 inp = open(f_inp, "r")
 
@@ -72,31 +94,39 @@ tape_negative = []
 
 prev_l = 0
 
+cnt_steps = 0
+flag = True
 while (True):
-    sys.stdout.write("\r")
+    
     cur_s = " "
     cur_symbol = ""
-    for i in range(len(tape_negative) - 1, -1, -1):
-        if (-i - 1 == pos):
-            cur_s += colorama.Fore.GREEN + colorama.Style.BRIGHT + tape_negative[i] + colorama.Style.RESET_ALL + " "
-            cur_symbol = tape_negative[i]
-        else:
-            cur_s += tape_negative[i] + " "
+    if (pos < 0):
+        cur_symbol = tape_negative[-pos - 1]
+    else:
+        cur_symbol = tape_positive[pos]
 
-    for i in range(len(tape_positive)):
-        if (i == pos):
-            cur_s += colorama.Fore.GREEN + colorama.Style.BRIGHT + tape_positive[i] + colorama.Style.RESET_ALL + " "
-            cur_symbol = tape_positive[i]
-        else:
-            cur_s += tape_positive[i] + " "
+    if (flag):
+        sys.stdout.write("\r")
+        for i in range(len(tape_negative) - 1, -1, -1):
+            if (-i - 1 == pos):
+                cur_s += colorama.Fore.GREEN + colorama.Style.BRIGHT + tape_negative[i] + colorama.Style.RESET_ALL + " "
+            else:
+                cur_s += tape_negative[i] + " "
 
-    cur_s += "   current node: " + cur
+        for i in range(len(tape_positive)):
+            if (i == pos):
+                cur_s += colorama.Fore.GREEN + colorama.Style.BRIGHT + tape_positive[i] + colorama.Style.RESET_ALL + " "
+                
+            else:
+                cur_s += tape_positive[i] + " "
 
-    if (len(cur_s) < prev_l):
-        cur_s += " " * (prev_l - len(cur_s))
-    sys.stdout.write(cur_s)
+        cur_s += "   current node: " + cur
 
-    prev_l = len(cur_s)
+        if (len(cur_s) < prev_l):
+            cur_s += " " * (prev_l - len(cur_s))
+        sys.stdout.write(cur_s)
+
+        prev_l = len(cur_s)
 
     if (cur == accept):
         sys.stdout.write("\n" + colorama.Fore.GREEN + "Accepted" + colorama.Style.RESET_ALL + "\n")
@@ -106,6 +136,7 @@ while (True):
         break
 
     if ((cur, cur_symbol) in graph):
+        cnt_steps += 1
         tmp = graph[(cur, cur_symbol)]
         cur = tmp[0]
         if (pos < 0):
@@ -126,3 +157,6 @@ while (True):
         break
 
     time.sleep(delay)
+
+
+sys.stdout.write("Total steps: " + str(cnt_steps) + "\n")
