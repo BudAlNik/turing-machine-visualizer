@@ -152,7 +152,7 @@ while (True):
             if (pos == len(tape_positive)):
                 tape_positive.append(blank)
     else:
-        sys.stdout.write("\n" + colorama.Fore.RED + "Failed, No edge by this symbol from current node, Rejected" + colorama.Style.RESET_ALL + "\n")
+        sys.stdout.write("\n" + colorama.Fore.RED + "Failed, No edge by this state: (" + cur + ", " + cur_symbol + "), from current node, Rejected" + colorama.Style.RESET_ALL + "\n")
         cur = reject
         break
 
