@@ -2,8 +2,8 @@
 
 Работает на *Python 3*.
 
-Для работы необходима библиотека *colorama*.
-(Установить `pip3 install colorama`)
+Для работы необходима библиотека *colorama*. Установить -- `pip3 install colorama`.
+А также, библиотека *curses*. В Unix системах должна быть установлена по-умолчанию. Чтобы установить в Windows -- `pip3 install windows-curses`.
 
 `visualizer.py machine input [delay]`
 `machine` -- файл с описанием машины Тьюринга.
