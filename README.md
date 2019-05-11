@@ -14,6 +14,7 @@
 Пример запуска:
 * `python3 visualizer.py example empty_input`
 * `python3 visualizer.py zero.out 01 0.5`
+* `python3 visualizer.py sorting.out 01 -p`
 
 Во время работы, символами `^` показывает, где находятся головки на лентах, пишет позиции головок, и пишет текущую вершину в автомате.
 
