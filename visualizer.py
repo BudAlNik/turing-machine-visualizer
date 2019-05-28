@@ -147,9 +147,11 @@ try:
 
             cur_symbols.append(tapes[i][carriage_positions[i]])
 
-            stdscr.addstr(line_cnt, 0, " ".join(to_show))
-            stdscr.addstr(line_cnt + 1, (carriage_positions[i] - lborder[i]) * 2, "^")
-            stdscr.addstr(line_cnt + 2, (carriage_positions[i] - lborder[i]) * 2, str(carriage_positions[i]))
+            stdscr.addstr(line_cnt, 0, " ".join(to_show)[:width])
+            carriage_pos = carriage_positions[i] - lborder[i]
+            carriage_shift = sum(len(sym) + 1 for sym in to_show[:carriage_pos])
+            stdscr.addstr(line_cnt + 1, carriage_shift, "^")
+            stdscr.addstr(line_cnt + 2, carriage_shift, str(carriage_positions[i]))
 
             line_cnt += 3
         
@@ -260,10 +262,12 @@ try:
 
         print(" ".join(tape_output))
 
+        carriage_pos = carriage_positions[i] - l
+        carriage_shift = sum(len(sym) + 1 for sym in tape_output[:carriage_pos])
         if not removed_from_left:
-            output_carriage_pos = (carriage_positions[i] - l) * 2
+            output_carriage_pos = carriage_shift
         else:
-            output_carriage_pos = (carriage_positions[i] - l) * 2 + 4
+            output_carriage_pos = carriage_shift + 4
 
         print(" " * output_carriage_pos + "^")
 
