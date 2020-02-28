@@ -1,0 +1,10 @@
+start: a
+accept: ac
+reject: rj
+blank: _
+a _ -> b This >
+b _ -> c is >
+c _ -> d example >
+d _ -> e with >
+e _ -> f long >
+f _ -> ac symbols >

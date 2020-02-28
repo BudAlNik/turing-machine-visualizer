@@ -13,6 +13,8 @@
 
 Пример запуска:
 * `python3 visualizer.py example empty_input`
+* `python3 visualizer.py example_wide_symbols empty_input`
+* `python3 visualizer.py example_multi_rows empty_input`
 * `python3 visualizer.py zero.out 01 0.5`
 * `python3 visualizer.py sorting.out 01 -p`
 
