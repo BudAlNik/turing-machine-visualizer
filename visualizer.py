@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 # Written by Nikolay Budin, 2017
+# Rewritten by Nikolay Budin, 2019
+# Updated by Nikolay Budin, 2020
 
 import time
 import sys
@@ -21,29 +23,28 @@ a _ -> rj _ ^
 b _ -> ac _ ^
 """
 
-name = sys.argv[1]
-f_inp = sys.argv[2]
+machine_desc_path = sys.argv[1]
+input_path = sys.argv[2]
 delay = 1
 paused = False
 for i in range(3, len(sys.argv)):
-    if sys.argv[i] == '-p':
-        paused = True
-    try:
-        delay = float(sys.argv[i])
-    except:
-        pass
+	if sys.argv[i] == '-p':
+		paused = True
+	try:
+		delay = float(sys.argv[i])
+	except:
+		pass
 
 def get_dir(act):
-    if (act == "<"):
-        return -1
-    if (act == "^"):
-        return 0
-    if (act == ">"):
-        return 1
-    print("'%s' is not a correct direction" % act, file=sys.stderr)
-    exit(1)
+	if act == "<":
+		return -1
+	if act == "^":
+		return 0
+	if act == ">":
+		return 1
+	raise Exception("'%s' is not a correct direction" % act)
 
-prog = open(name, "r")
+machine_desc = open(machine_desc_path, "r")
 
 accept = "AC"
 reject = "RJ"
@@ -56,226 +57,248 @@ nodes = set()
 
 c = 0
 
-for s in prog:
-    if c == 0 and s.strip().isdecimal():
-        tapes_number = int(s.strip())
-    elif (s.startswith("start:")):
-        cur = s[s.find(":") + 1:].strip()
-    elif (s.startswith("accept:")):
-        accept = s[s.find(":") + 1:].strip()
-    elif (s.startswith("reject:")):
-        reject = s[s.find(":") + 1:].strip()
-    elif (s.startswith("blank:")):
-        blank = s[s.find(":") + 1:].strip()
-    elif (s.strip() != ""):
-        tmp = s.split()
-        if len(tmp) != 3 + tapes_number * 3:
-            print("Parse failed on line: \"%s\"" % s.strip(), file=sys.stderr)
-            exit(1)
+symb_len = 1
 
-        fr = tmp[0]
-        ch = tuple(tmp[1:tapes_number + 1])
-        if tmp[tapes_number + 1] != "->":
-            print("Parse failed on line: \"%s\"" % s.strip(), file=sys.stderr)
-            exit(1)
+for s in machine_desc:
+	if c == 0 and s.strip().isdecimal():
+		tapes_number = int(s.strip())
+	elif s.startswith("start:"):
+		cur = s[s.find(":") + 1:].strip()
+	elif s.startswith("accept:"):
+		accept = s[s.find(":") + 1:].strip()
+	elif s.startswith("reject:"):
+		reject = s[s.find(":") + 1:].strip()
+	elif s.startswith("blank:"):
+		blank = s[s.find(":") + 1:].strip()
+	elif s.strip() != "":
+		tmp = s.split()
+		if len(tmp) != 3 + tapes_number * 3:
+			raise Exception("Parse failed on line: \"%s\"" % s.strip())
 
-        to = tmp[tapes_number + 2]
-        new_ch = []
-        moves = []
-        for i in range(tapes_number):
-            new_ch.append(tmp[tapes_number + 3 + i * 2])
-            moves.append(get_dir(tmp[tapes_number + 3 + i * 2 + 1]))
+		fr = tmp[0]
+		ch = tuple(tmp[1:tapes_number + 1])
+		if tmp[tapes_number + 1] != "->":
+			raise Exception("Parse failed on line: \"%s\"" % s.strip())
 
-        graph[(fr, ch)] = [to, new_ch, moves]
-        nodes.add(fr)
+		to = tmp[tapes_number + 2]
+		new_ch = []
+		moves = []
+		for i in range(tapes_number):
+			new_ch.append(tmp[tapes_number + 3 + i * 2])
+			symb_len = max(symb_len, len(new_ch[-1]))
+			moves.append(get_dir(tmp[tapes_number + 3 + i * 2 + 1]))
 
-    c += 1
+		graph[(fr, ch)] = [to, new_ch, moves]
+		nodes.add(fr)
+
+	c += 1
 
 for p in graph:
-    if graph[p][0] != reject and graph[p][0] != accept and not graph[p][0] in nodes:
-        print("Warning: There's an edge leading to node \"%s\", but there's no edge going from this node" % graph[p][0])
+	if graph[p][0] != reject and graph[p][0] != accept and not graph[p][0] in nodes:
+		print("Warning: There's an edge leading to node \"%s\", but there's no edge going from this node" % graph[p][0])
 
-inp = open(f_inp, "r")
+inp = open(input_path, "r")
 
-carriage_positions = [0] * tapes_number
+carriages_position = [0] * tapes_number
 input_data = inp.readline().split()
 tapes = [dict() for _ in range(tapes_number)]
 
 for i in range(len(input_data)):
-    tapes[0][i] = input_data[i]
+	tapes[0][i] = input_data[i]
 
 prev_l = 0
 
 try:
-    stdscr = curses.initscr()
-    curses.noecho()
-    curses.cbreak()
-    curses.start_color()
-    curses.use_default_colors()
-    stdscr.nodelay(1)
-    stdscr.keypad(True)
-    height, width = stdscr.getmaxyx()
-    curses.init_pair(1, curses.COLOR_BLUE, -1)
+	stdscr = curses.initscr()
+	curses.noecho()
+	curses.cbreak()
+	curses.start_color()
+	curses.use_default_colors()
+	stdscr.nodelay(1)
+	stdscr.keypad(True)
+	height, width = stdscr.getmaxyx()
 
-    steps_cnt = 0
-    flag = True
+	if height < tapes_number * 3 + 5:
+		raise Exception("Terminal window has to be at least %d characters height" % (tapes_number * 3 + 5))
 
-    gap = 5
-    cells_to_show = width // 2
+	curses.init_pair(1, curses.COLOR_BLUE, -1)
 
-    lborder = [carriage_positions[i] - gap for i in range(tapes_number)]
+	steps_cnt = 0
+	flag = True
 
-    outcome = ""
+	gap = 5
+	cells_to_show = (width + 1) // (1 + symb_len)
 
-    while (True):
-        stdscr.clear()
-        stdscr.addstr(height - 1, 0, "Press 'q' to interrupt, Press space to pause/resume")
-        line_cnt = 0
-        cur_symbols = []
-        for i in range(tapes_number):
-            if carriage_positions[i] - lborder[i] < gap:
-                lborder[i] = carriage_positions[i] - gap
-            elif lborder[i] + cells_to_show - carriage_positions[i] < gap:
-                lborder[i] = carriage_positions[i] + gap - cells_to_show
+	if cells_to_show < gap * 2 + 1:
+		raise Exception("Terminal window has to be at least %d characters width" % ((gap * 2 + 1) * cells_to_show - 1))
 
-            to_show = []
+	lborder = [carriages_position[i] - gap for i in range(tapes_number)]
 
-            for j in range(cells_to_show):
-                if not lborder[i] + j in tapes[i]:
-                    tapes[i][lborder[i] + j] = blank
-                to_show.append(tapes[i][lborder[i] + j])
+	def get_carriage_shift(carriage_pos):
+		return carriage_pos * (symb_len + 1) + (symb_len - 1) // 2
 
-            cur_symbols.append(tapes[i][carriage_positions[i]])
+	def fix_symb_len(symb):
+		left_free = symb_len - len(symb)
+		return " " * (left_free // 2) + symb + " " * ((left_free + 1) // 2)
 
-            stdscr.addstr(line_cnt, 0, " ".join(to_show)[:width])
-            carriage_pos = carriage_positions[i] - lborder[i]
-            carriage_shift = sum(len(sym) + 1 for sym in to_show[:carriage_pos])
-            stdscr.addstr(line_cnt + 1, carriage_shift, "^")
-            stdscr.addstr(line_cnt + 2, carriage_shift, str(carriage_positions[i]))
+	outcome = ""
 
-            line_cnt += 3
-        
-        line_cnt += 1
-        stdscr.addstr(line_cnt, 0, "Current node: %s" % cur)
-        stdscr.addstr(line_cnt + 1, 0, "Steps done: %d" % steps_cnt)
-        line_cnt += 3
+	pause_message = "Paused (press space to resume, press right-arrow to proceed to the next state)"
+	info_message = "Press 'q' to interrupt, Press space to pause/resume"
 
-        stdscr.refresh()
+	while (True):
+		stdscr.clear()
+		stdscr.addstr(tapes_number * 3 + 4, 0, info_message)
+		line_cnt = 0
+		cur_symbols = []
+		for i in range(tapes_number):
+			if carriages_position[i] - lborder[i] < gap:
+				lborder[i] = carriages_position[i] - gap
+			elif lborder[i] + cells_to_show - carriages_position[i] < gap:
+				lborder[i] = carriages_position[i] + gap - cells_to_show
 
-        cur_symbols = tuple(cur_symbols)
+			to_show = []
 
-        if (cur == accept):
-            outcome = colorama.Fore.GREEN + "Accepted" + colorama.Style.RESET_ALL
-            break
-        if (cur == reject):
-            outcome = colorama.Fore.RED + "Rejected" + colorama.Style.RESET_ALL
-            break
+			for j in range(cells_to_show):
+				if not lborder[i] + j in tapes[i]:
+					tapes[i][lborder[i] + j] = blank
+				to_show.append(tapes[i][lborder[i] + j])
 
-        if not (cur, cur_symbols) in graph:
-            outcome = colorama.Fore.RED + "Failed, No edge from %s by symbols (%s), Rejected" % (cur, ", ".join(cur_symbols)) + colorama.Style.RESET_ALL
-            cur = reject
-            break
+			cur_symbols.append(tapes[i][carriages_position[i]])
 
-        if paused:
-            stdscr.addstr(line_cnt, 0, "Paused (press space to resume, press right-arrow to proceed to the next state)", curses.color_pair(1))
+			stdscr.addstr(line_cnt, 0, " ".join(map(fix_symb_len, to_show)))
+			carriage_pos = carriages_position[i] - lborder[i]
+			carriage_shift = get_carriage_shift(carriage_pos)
+			stdscr.addstr(line_cnt + 1, carriage_shift, "^")
+			stdscr.addstr(line_cnt + 2, carriage_shift - (len(str(carriages_position[i])) - 1) // 2, str(carriages_position[i]))
 
-        was = float(time.time())
-        interupted = False
-        while time.time() - was < delay or paused:
-            key = stdscr.getch()
-            
-            if key == ord('q'):
-                outcome = colorama.Fore.YELLOW + "Interrupted by user" + colorama.Style.RESET_ALL
-                interupted = True
-                break
+			line_cnt += 3
+		
+		line_cnt += 1
+		stdscr.addstr(line_cnt, 0, "Current node: %s" % cur)
+		stdscr.addstr(line_cnt + 1, 0, "Steps done: %d" % steps_cnt)
+		line_cnt += 3
 
-            if key == ord(' '):
-                paused ^= 1
-                if paused:
-                    stdscr.addstr(line_cnt, 0, "Paused (press space to resume, press right-arrow to proceed to the next state)", curses.color_pair(1))
-                else:
-                    stdscr.addstr(line_cnt, 0, " " * 30)
+		stdscr.refresh()
 
-                stdscr.refresh()
+		cur_symbols = tuple(cur_symbols)
 
-            if key == curses.KEY_RIGHT:
-                break
+		if cur == accept:
+			outcome = colorama.Fore.GREEN + "Accepted" + colorama.Style.RESET_ALL
+			break
+		if cur == reject:
+			outcome = colorama.Fore.RED + "Rejected" + colorama.Style.RESET_ALL
+			break
 
-            time.sleep(0.01)
+		if not (cur, cur_symbols) in graph:
+			if tapes_number == 1:
+				outcome = colorama.Fore.RED + "Failed, No edge from %s by symbol %s, Rejected" % (cur, cur_symbols[0]) + colorama.Style.RESET_ALL
+			else:
+				outcome = colorama.Fore.RED + "Failed, No edge from %s by symbols (%s), Rejected" % (cur, ", ".join(cur_symbols)) + colorama.Style.RESET_ALL
+			cur = reject
+			break
 
-        if interupted:
-            break
+		if paused:
+			stdscr.addstr(tapes_number * 3 + 4, 0, pause_message, curses.color_pair(1))
 
-        steps_cnt += 1
-        tmp = graph[(cur, cur_symbols)]
-        cur = tmp[0]
+		time_was = float(time.time())
+		interupted = False
+		while time.time() - time_was < delay or paused:
+			key = stdscr.getch()
+			
+			if key == ord('q'):
+				outcome = colorama.Fore.YELLOW + "Interrupted by user" + colorama.Style.RESET_ALL
+				interupted = True
+				break
 
-        for i in range(tapes_number):
-            tapes[i][carriage_positions[i]] = tmp[1][i]
-            carriage_positions[i] += tmp[2][i]
+			if key == ord(' '):
+				paused ^= 1
+				if paused:
+					stdscr.addstr(tapes_number * 3 + 4, 0, pause_message, curses.color_pair(1))
+				else:
+					stdscr.addstr(tapes_number * 3 + 4, 0, " " * len(pause_message))
+					stdscr.addstr(tapes_number * 3 + 4, 0, info_message)
 
-    curses.endwin()
+				stdscr.refresh()
 
-    print("Final state of the tapes:")
-    for i in range(tapes_number):
-        tape_output = []
-        for pos in tapes[i]:
-            tape_output.append((pos, tapes[i][pos]))
+			if key == curses.KEY_RIGHT:
+				break
 
-        tape_output.sort()
-        l = tape_output[0][0]
-        tape_output = list(map(lambda x : x[1], tape_output))
+			time.sleep(0.01)
 
-        while len(tape_output) and tape_output[0] == '_' and l < carriage_positions[i]:
-            tape_output = tape_output[1:]
-            l += 1
+		if interupted:
+			break
 
-        while len(tape_output) and tape_output[-1] == '_' and carriage_positions[i] + 1 < l + len(tape_output):
-            tape_output = tape_output[:-1]
+		steps_cnt += 1
+		tmp = graph[(cur, cur_symbols)]
+		cur = tmp[0]
 
-        tape_output = ["_", "_"] + tape_output + ["_", "_"]
-        l -= 2
+		for i in range(tapes_number):
+			tapes[i][carriages_position[i]] = tmp[1][i]
+			carriages_position[i] += tmp[2][i]
 
-        removed_from_left = False
-        removed_from_right = False
+	curses.endwin()
 
-        while len(tape_output) > cells_to_show:
-            if carriage_positions[i] - l > l + len(tape_output) - carriage_positions[i]:
-                if tape_output[0] != '_' and not removed_from_left:
-                    removed_from_left = True
-                    cells_to_show -= 2
+	print("Final state of the tapes:")
+	for i in range(tapes_number):
+		tape_output = []
+		for pos in tapes[i]:
+			tape_output.append((pos, tapes[i][pos]))
 
-                tape_output = tape_output[1:]
-                l += 1
-            else:
-                if tape_output[-1] != '_' and not removed_from_right:
-                    removed_from_right = True
-                    cells_to_show -= 2
+		tape_output.sort()
+		left_ind = tape_output[0][0]
+		tape_output = list(map(lambda x : x[1], tape_output))
 
-                tape_output = tape_output[:-1]
+		while len(tape_output) and tape_output[0] == '_' and left_ind < carriages_position[i]:
+			tape_output = tape_output[1:]
+			left_ind += 1
 
-        if removed_from_left:
-            tape_output = ["..."] + tape_output
+		while len(tape_output) and tape_output[-1] == '_' and carriages_position[i] + 1 < left_ind + len(tape_output):
+			tape_output = tape_output[:-1]
 
-        if removed_from_right:
-            tape_output = tape_output + ["..."]
+		tape_output = ["_", "_"] + tape_output + ["_", "_"]
+		tape_output = list(map(fix_symb_len, tape_output))
+		left_ind -= 2
 
-        print(" ".join(tape_output))
+		removed_from_left = False
+		removed_from_right = False
 
-        carriage_pos = carriage_positions[i] - l
-        carriage_shift = sum(len(sym) + 1 for sym in tape_output[:carriage_pos])
-        if not removed_from_left:
-            output_carriage_pos = carriage_shift
-        else:
-            output_carriage_pos = carriage_shift + 4
+		will_add_len = 0
 
-        print(" " * output_carriage_pos + "^")
+		while len(tape_output) * (symb_len + 1) - 1 + will_add_len > width:
+			if carriages_position[i] - left_ind > left_ind + len(tape_output) - 1 - carriages_position[i]:
+				if tape_output[0] != '_' and not removed_from_left:
+					removed_from_left = True
+					will_add_len += 4
 
-    print(outcome)
-    print("Total steps: %d" % steps_cnt)
+				tape_output = tape_output[1:]
+				left_ind += 1
+			else:
+				if tape_output[-1] != '_' and not removed_from_right:
+					removed_from_right = True
+					will_add_len += 4
+
+				tape_output = tape_output[:-1]
+
+		if removed_from_left:
+			tape_output = ["..."] + tape_output
+
+		if removed_from_right:
+			tape_output = tape_output + ["..."]
+
+		print(" ".join(tape_output))
+
+		carriage_pos = carriages_position[i] - left_ind
+		carriage_shift = get_carriage_shift(carriage_pos)
+		if removed_from_left:
+			carriage_shift += 4
+
+		print(" " * carriage_shift + "^")
+
+	print(outcome)
+	print("Total steps: %d" % steps_cnt)
 except KeyboardInterrupt as e:
-    pass
+	pass
 except Exception as error:
-    curses.endwin()
-    print(error)
-    print("Something went wrong")
+	curses.endwin()
+	raise error
