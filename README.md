@@ -12,9 +12,9 @@
 * `-p` -- опционально, если ключ указан, исполнение изначально будет поставлено на паузу.
 
 Пример запуска:
-* `python3 visualizer.py example empty_input`
-* `python3 visualizer.py example_wide_symbols empty_input`
-* `python3 visualizer.py example_multi_rows empty_input`
+* `python3 visualizer.py example /dev/null` (`/dev/null` может быть заменен на путь до любого пустого файла)
+* `python3 visualizer.py example_wide_symbols /dev/null`
+* `python3 visualizer.py example_multi_rows /dev/null`
 * `python3 visualizer.py zero.out 01 0.5`
 * `python3 visualizer.py sorting.out 01 -p`
 
